@@ -9,7 +9,7 @@ import pwd
 import random
 import numpy as np
 from vae import VaeProblem, VAE
-from environment import EnvCoco, EnvVae, EnvOneD
+from environment import EnvCoco, EnvVae, EnvOneD, EnvLevy
 from collections import defaultdict
 import traceback
 import numpy as np
@@ -33,15 +33,15 @@ class MainRun(object):
     def __init__(self):
         self.action_space = args.action_space
         self.problem = None
-        if self.action_space != 784:
+        if self.action_space != 784 and self.action_space != 2:
             suite_name = "bbob"
             suite_filter_options = ("dimensions: " + str(max(self.action_space, 2)))
             self.suite = cocoex.Suite(suite_name, "", suite_filter_options)
-
+        
     def reset(self, problem_index):
         if self.action_space == 784:
             self.problem = VaeProblem(problem_index)
-        else:
+        elif self.action_space != 784 and self.action_space != 2:
             self.suite.reset()
             self.problem = self.suite.get_problem(problem_index)
 
@@ -52,29 +52,13 @@ class MainRun(object):
             self.env = EnvVae(self.problem, problem_index, to_numpy=True)
         elif self.action_space == 1:
             self.env = EnvOneD(self.problem, problem_index, need_norm=True, to_numpy=True)
+        elif self.action_space == 2:
+            self.env = EnvLevy(problem_index, to_numpy=True)
         else:
             self.env = EnvCoco(self.problem, problem_index, need_norm=True, to_numpy=True)
 
-
-
-# Define the Levy function
-def levy_function(x):
-    return levy.pdf(x)
-
-# Define the TrustRegionAgent configuration
-class LevyTrustRegionAgent(TrustRegionAgent):
-    def __init__(self, exp_name, env, checkpoint):
-        super().__init__(exp_name, env, checkpoint)
-
-    # Override the exploration_step method to use levy_function
-    def exploration_step(self):
-        self.frame += self.n_explore
-        pi_explore = levy_function(np.random.uniform(-10, 10, size=(self.n_explore, self.action_space)))
-        rewards = -pi_explore  # Minimize the negative Levy function
-        return pi_explore, rewards
-
-
 def main():
+
     set_seed(args.seed)
     username = pwd.getpwuid(os.geteuid()).pw_name
     algorithm = args.algorithm
@@ -98,7 +82,7 @@ def main():
         main_run.reset(problem_index)
         divergence = run_exp(main_run.env)
     else:
-        res_dir = os.path.join('/data/', 'baseline', 'results', run_id)
+        res_dir = os.path.join('/data/', username, 'gan_rl', 'baseline', 'results', run_id)
         if not os.path.exists(res_dir):
             try:
                 os.makedirs(res_dir)
@@ -107,11 +91,7 @@ def main():
 
         for i in problems_to_run:
             main_run.reset(i)
-            
-            # Create a LevyTrustRegionAgent instance for EGL optimization
-            agent = LevyTrustRegionAgent(exp_name=run_id, env=main_run.env, checkpoint=None)
-            
-            divergence = run_exp(agent.env)
+            divergence = run_exp(main_run.env)
 
             data['iter_index'].append(i)
             data['divergence'].append(divergence)

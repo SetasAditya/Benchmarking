@@ -1,48 +1,28 @@
 import numpy as np
-from scipy.optimize import minimize
-from scipy.stats import levy
-from trust_region_agent import TrustRegionAgent
+from agent import Env  # Import the Env class from the TrustRegionAgent code
 
-# Define the Levy function
-def levy_function(x):
-    return levy.pdf(x)
+class LevyEnvironment(Env):
+    def __init__(self, dimension):
+        super().__init__(dimension)  # Call the constructor of the base class
+        self.dimension = dimension
 
-# Define the TrustRegionAgent configuration
-class LevyTrustRegionAgent(TrustRegionAgent):
-    def __init__(self, exp_name, env, checkpoint):
-        super().__init__(exp_name, env, checkpoint)
+    def step_policy(self, policy):
+        # Implement the step_policy method to execute a policy and return the reward
+        # Evaluate the policy on the Levy function and return the reward
+        reward = self.levy_function(policy)
+        return reward
 
-    # Override the exploration_step method to use levy_function
-    def exploration_step(self):
-        self.frame += self.n_explore
-        pi_explore = levy_function(np.random.uniform(-10, 10, size=(self.n_explore, self.action_space)))
-        rewards = -pi_explore  # Minimize the negative Levy function
-        return pi_explore, rewards
+    def levy_function(self, x):
+        # Define the Levy function to be minimized
+        # You can replace this with your actual Levy function implementation
+        return -((np.sin(3*np.pi*x))**2 + (x-1)**2 * (1 + (np.sin(3*np.pi*2*x))**2))
 
-# Configure the TrustRegionAgent
-exp_name = "Levy_TrustRegion"
-env = None  # Provide the environment if necessary
-checkpoint = None  # Provide the checkpoint if resuming training
-agent = LevyTrustRegionAgent(exp_name, env, checkpoint)
+    # You may need to implement other methods required by the base class based on your specific requirements
 
-# Define convergence criteria
-tolerance = 1e-5
-max_iterations = 1000
+# Example usage:
+# Create an instance of the Levy environment
+dimension = 1  # Dimension of the problem (e.g., number of variables)
+env = LevyEnvironment(dimension)
 
-# Run optimization with TrustRegionAgent
-convergence = False
-iteration = 0
-while not convergence and iteration < max_iterations:
-    results = next(agent.minimize())
-    convergence = np.abs(results['best_reward']) < tolerance
-    iteration += 1
+# Now you can use this environment with the TrustRegionAgent for Levy function minimization
 
-# Evaluate convergence speed, solution quality, and efficiency
-convergence_speed = iteration  # Number of iterations until convergence
-solution_quality = -results['best_reward']  # Final objective value
-efficiency = iteration  # Total number of iterations
-
-# Print results
-print("Convergence Speed:", convergence_speed)
-print("Solution Quality:", solution_quality)
-print("Efficiency:", efficiency)

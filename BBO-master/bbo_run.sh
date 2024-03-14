@@ -10,7 +10,7 @@ loc=`dirname "%0"`
 
 args="--algorithm=$algorithm --start=3 --identifier=$identifier --game=RUN --resume=0 --load-last-model"
 
-CUDA_VISIBLE_DEVICES=0, python main.py --spline --action-space=1 $args $aux &
+CUDA_VISIBLE_DEVICES=0, python main.py --spline --action-space=2 $args $aux &
 
 
 #CUDA_VISIBLE_DEVICES=2, python main.py --spline --action-space=2 $args $aux &

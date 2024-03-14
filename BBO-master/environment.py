@@ -51,6 +51,7 @@ class Env(object):
 
     def denormalize(self):
         raise NotImplementedError
+    
 
 class EnvCoco(Env):
 
@@ -359,3 +360,59 @@ def one_d_change_dim(policy):
     policy = np.clip(policy, -1, 1)
 
     return policy
+
+
+class EnvLevy(Env):
+
+    def __init__(self, problem_iter, need_norm=True, to_numpy=True):
+        super().__init__(problem_iter, False, to_numpy)
+
+    def get_problem_dim(self):
+        return 2  # Assuming the Levy function is defined in 2 dimensions
+
+    def get_problem_index(self):
+        return self.problem_iter
+
+    def get_problem_id(self):
+        return f"Levy_{self.problem_iter}"
+    
+    def constrains(self):
+         return self.lower_bounds, self.upper_bounds
+    
+    def get_initial_solution(self):
+        return np.random.uniform(-10, 10, size=(2,))  # Random initial solution within bounds
+
+    def reset(self):
+        self.observed_list = []
+        self.best_list = []
+        self.pi_list = []
+        self.samples = 0
+
+    def levy_function(self, x):
+        # Define the Levy function to be minimized
+        return -((np.sin(3*np.pi*x))**2 + (x-1)**2 * (1 + (np.sin(3*np.pi*2*x))**2))
+
+    def step_policy(self, policy):
+        # In this example, policy represents a point in the search space
+        # We'll evaluate the Levy function at this point and update the environment
+        result = self.levy_function(policy)
+        self.observed_list.append(result)
+        self.best_list.append(min(self.best_list[-1], result) if self.best_list else result)
+        self.samples += 1
+
+    def no_normalization(self, policy):
+        policy = np.clip(policy, a_min=self.lower_bounds, a_max=self.upper_bounds)
+        return policy
+
+    def f(self, policy):
+        # Evaluate the Levy function at the given policy (point in the search space)
+        return self.levy_function(policy)
+    
+    def get_f0(self):
+        # Evaluate the Levy function at the initial solution
+        initial_solution = self.get_initial_solution()
+        return self.levy_function(initial_solution)
+
+    def denormalize(self, policy):
+        # No denormalization needed as Levy function typically operates in a continuous space
+        return policy

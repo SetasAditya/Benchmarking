@@ -3,7 +3,7 @@
 dim=$1
 aux="${@:2}"
 
-echo dim $1
+echo dim $2
 
 loc=`dirname "%0"`
 
